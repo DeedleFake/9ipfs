@@ -3,13 +3,17 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path"
+	"strings"
 
 	"github.com/DeedleFake/p9"
 )
@@ -208,15 +212,33 @@ func (f file) Readdir() ([]p9.DirEntry, error) {
 }
 
 func main() {
-	fs, err := newFS("http://localhost:5001/api/v0")
+	network := flag.String("net", "unix", "network to listen on")
+	addr := flag.String("addr", "/tmp/ipfs.sock", "address to listen on")
+	api := flag.String("api", "http://localhost:5001/api", "address of HTTP API for IPFS")
+	flag.Parse()
+
+	fs, err := newFS(strings.TrimSuffix(*api, "/") + "/v0")
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 
-	err = p9.ListenAndServe("unix", "ipfs.sock", p9.FSConnHandler(fs, 4096))
+	lis, err := net.Listen(*network, *addr)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
+	defer lis.Close()
+
+	go func() {
+		err = p9.Serve(lis, p9.FSConnHandler(fs, 4096))
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
 }
