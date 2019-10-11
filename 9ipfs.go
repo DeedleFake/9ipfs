@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/DeedleFake/p9"
+	"github.com/DeedleFake/p9/proto"
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 	defer lis.Close()
 
 	go func() {
-		err = p9.Serve(lis, p9.FSConnHandler(fs, 4096))
+		err = proto.Serve(lis, p9.Proto(), p9.FSConnHandler(fs, 4096))
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)

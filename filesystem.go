@@ -12,9 +12,9 @@ import (
 )
 
 var knownPaths = map[string]p9.DirEntry{
-	"":     {Mode: p9.ModeDir | 0555},
-	"ipns": {Mode: p9.ModeDir | 0555},
-	"ipfs": {Mode: p9.ModeDir | 0555},
+	"":     {FileMode: p9.ModeDir | 0555},
+	"ipns": {FileMode: p9.ModeDir | 0555},
+	"ipfs": {FileMode: p9.ModeDir | 0555},
 }
 
 type FileSystem struct {
@@ -101,9 +101,9 @@ func (fs FileSystem) Stat(p string) (p9.DirEntry, error) {
 	}
 
 	return p9.DirEntry{
-		Mode:   mode,
-		Length: data.Size,
-		Name:   path.Base(p),
+		FileMode:  mode,
+		Length:    data.Size,
+		EntryName: path.Base(p),
 	}, nil
 }
 

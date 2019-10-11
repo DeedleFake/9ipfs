@@ -69,9 +69,9 @@ func (f file) Readdir() ([]p9.DirEntry, error) {
 		}
 
 		entries = append(entries, p9.DirEntry{
-			Mode:   mode,
-			Length: link.Size,
-			Name:   link.Name,
+			FileMode:  mode,
+			Length:    link.Size,
+			EntryName: link.Name,
 		})
 	}
 
