@@ -1,20 +1,22 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/DeedleFake/p9"
 )
 
 var knownPaths = map[string]p9.DirEntry{
-	"":     {FileMode: p9.ModeDir | 0555},
-	"ipns": {FileMode: p9.ModeDir | 0555},
-	"ipfs": {FileMode: p9.ModeDir | 0555},
+	"":     {FileMode: p9.ModeDir | 0555, Version: 0, Path: 0},
+	"ipns": {FileMode: p9.ModeDir | 0555, Version: 0, Path: 1},
+	"ipfs": {FileMode: p9.ModeDir | 0555, Version: 0, Path: 2},
 }
 
 type FileSystem struct {
@@ -100,10 +102,15 @@ func (fs FileSystem) Stat(p string) (p9.DirEntry, error) {
 		mode |= p9.ModeDir
 	}
 
+	var qpath uint64
+	binary.Read(strings.NewReader(p[9:]), binary.LittleEndian, &qpath)
+
 	return p9.DirEntry{
 		FileMode:  mode,
 		Length:    data.Size,
 		EntryName: path.Base(p),
+
+		Path: qpath,
 	}, nil
 }
 
@@ -133,4 +140,17 @@ func (fs FileSystem) Create(p string, perm p9.FileMode, mode uint8) (p9.File, er
 
 func (fs FileSystem) Remove(p string) error {
 	return errors.New("read-only filesystem")
+}
+
+func (fs FileSystem) GetQID(p string) (p9.QID, error) {
+	dir, err := fs.Stat(p)
+	if err != nil {
+		return p9.QID{}, err
+	}
+
+	return p9.QID{
+		Type:    dir.FileMode.QIDType(),
+		Version: dir.Version,
+		Path:    dir.Path,
+	}, nil
 }
