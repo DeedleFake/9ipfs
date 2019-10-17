@@ -14,9 +14,9 @@ import (
 )
 
 var knownPaths = map[string]p9.DirEntry{
-	"":     {FileMode: p9.ModeDir | 0555, Version: 0, Path: 0},
-	"ipns": {FileMode: p9.ModeDir | 0555, Version: 0, Path: 1},
-	"ipfs": {FileMode: p9.ModeDir | 0555, Version: 0, Path: 2},
+	"":     {FileMode: p9.ModeDir | 0555, Path: 0},
+	"ipns": {FileMode: p9.ModeDir | 0555, EntryName: "ipfs", Path: 1},
+	"ipfs": {FileMode: p9.ModeDir | 0555, EntryName: "ipns", Path: 2},
 }
 
 type FileSystem struct {
@@ -73,8 +73,16 @@ func (fs *FileSystem) Attach(afile p9.File, user, aname string) (p9.Attachment, 
 }
 
 func (fs FileSystem) Stat(p string) (p9.DirEntry, error) {
+	if p == "." {
+		p = ""
+	}
+
 	if known, ok := knownPaths[p]; ok {
 		return known, nil
+	}
+
+	if !strings.HasPrefix(p, "ipfs/") && !strings.HasPrefix(p, "ipns/") {
+		return p9.DirEntry{}, errors.New("no such file or directory")
 	}
 
 	p, err := fs.resolve(p)
@@ -121,6 +129,17 @@ func (fs FileSystem) WriteStat(p string, changes p9.StatChanges) error {
 func (fs FileSystem) Open(p string, mode uint8) (p9.File, error) {
 	if mode&(p9.OWRITE|p9.ORDWR) != 0 {
 		return nil, errors.New("read-only filesystem")
+	}
+
+	if p == "." {
+		p = ""
+	}
+
+	if _, ok := knownFiles[p]; ok {
+		return &file{
+			fs:   fs,
+			path: p,
+		}, nil
 	}
 
 	p, err := fs.resolve(p)

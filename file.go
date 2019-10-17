@@ -9,6 +9,12 @@ import (
 	"github.com/DeedleFake/p9"
 )
 
+var knownFiles = map[string][]p9.DirEntry{
+	"":     {knownPaths["ipfs"], knownPaths["ipns"]},
+	"ipfs": {},
+	"ipns": {},
+}
+
 type file struct {
 	fs   FileSystem
 	path string
@@ -37,6 +43,10 @@ func (f file) Close() error {
 }
 
 func (f file) Readdir() ([]p9.DirEntry, error) {
+	if known, ok := knownFiles[f.path]; ok {
+		return known, nil
+	}
+
 	rsp, err := http.Get(f.fs.endpoint("ls", "arg", f.path))
 	if err != nil {
 		return nil, err
